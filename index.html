@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>משוואות ריבועיות עם שברים</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Serif+Hebrew:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1612;
+    --paper: #faf7f2;
+    --cream: #f0ebe0;
+    --amber: #c8860a;
+    --amber-light: #f5c842;
+    --amber-pale: #fef5d8;
+    --red: #b84040;
+    --green: #3a7a52;
+    --blue: #2d5f8a;
+    --line: rgba(26,22,18,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Serif Hebrew', serif;
+    font-weight: 300;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE TEXTURE ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--amber);
+    width: 0%;
+    transition: width 0.3s ease;
+    z-index: 999;
+    box-shadow: 0 0 8px var(--amber-light);
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; right: 0;
+    padding: 20px 32px;
+    z-index: 100;
+    display: flex;
+    gap: 6px;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .nav-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--line);
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 1.5px solid transparent;
+  }
+
+  .nav-dot.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    box-shadow: 0 0 6px var(--amber-light);
+  }
+
+  .nav-dot:hover { background: var(--amber-light); }
+
+  /* ─── SECTIONS ─── */
+  section {
+    min-height: 100vh;
+    padding: 80px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-inner {
+    max-width: 720px;
+    width: 100%;
+  }
+
+  /* ─── SECTION LABELS ─── */
+  .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* ─── HERO ─── */
+  #hero {
+    background: var(--ink);
+    color: var(--paper);
+    min-height: 100vh;
+  }
+
+  #hero .section-inner { text-align: center; }
+
+  .hero-title {
+    font-family: 'Crimson Pro', serif;
+    font-size: clamp(48px, 8vw, 88px);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+    color: var(--paper);
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--amber-light);
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    font-weight: 300;
+    color: rgba(240,235,224,0.65);
+    margin-bottom: 48px;
+    line-height: 1.6;
+  }
+
+  .hero-eq {
+    display: inline-block;
+    padding: 20px 36px;
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    color: var(--amber-light);
+    margin-bottom: 48px;
+    background: rgba(245,200,66,0.05);
+    letter-spacing: 1px;
+  }
+
+  .scroll-hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(240,235,224,0.35);
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  /* ─── CHAPTER DIVIDER ─── */
+  .chapter-num {
+    font-family: 'Crimson Pro', serif;
+    font-size: clamp(100px, 20vw, 180px);
+    font-weight: 300;
+    color: var(--cream);
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 32px;
+    margin: 20px 0;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--amber);
+  }
+
+  .card.blue::before { background: var(--blue); }
+  .card.green::before { background: var(--green); }
+  .card.red::before { background: var(--red); }
+  .card.gold { background: var(--amber-pale); }
+  .card.gold::before { background: var(--amber); }
+
+  .card h3 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  /* ─── MATH DISPLAY ─── */
+  .math-box {
+    background: var(--ink);
+    color: var(--amber-light);
+    border-radius: 6px;
+    padding: 20px 28px;
+    margin: 20px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 0.5px;
+    position: relative;
+  }
+
+  .math-box .MJX-TEX { color: var(--amber-light); }
+
+  /* MathJax in dark box */
+  .math-box .mjx-math { color: var(--amber-light) !important; }
+
+  /* ─── FRACTION CSS ─── */
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+    font-size: 0.85em;
+  }
+  .frac .num { border-bottom: 1.5px solid currentColor; padding: 0 4px 2px; }
+  .frac .den { padding: 2px 4px 0; }
+
+  /* ─── STEPS ─── */
+  .step-list { list-style: none; }
+
+  .step-item {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 24px;
+    align-items: flex-start;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.5s ease;
+  }
+
+  .step-item.revealed {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--amber-light);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-content h4 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .step-content p { color: rgba(26,22,18,0.75); }
+
+  /* ─── INTERACTIVE SOLVER ─── */
+  .solver {
+    background: var(--cream);
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+
+  .solver-header {
+    background: var(--ink);
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .solver-header span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--amber-light);
+    letter-spacing: 1px;
+  }
+
+  .solver-body { padding: 28px; }
+
+  .solver-step {
+    display: none;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .solver-step.active { display: block; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .solver-eq {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 24px;
+    margin: 16px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 17px;
+    text-align: center;
+    color: var(--ink);
+    transition: all 0.3s;
+  }
+
+  .solver-eq.highlight {
+    border-color: var(--amber);
+    background: var(--amber-pale);
+    box-shadow: 0 0 0 3px rgba(200,134,10,0.1);
+  }
+
+  .solver-eq.answer {
+    border-color: var(--green);
+    background: #f0faf4;
+    color: var(--green);
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .solver-explain {
+    font-size: 15px;
+    color: rgba(26,22,18,0.7);
+    margin: 12px 0;
+    line-height: 1.7;
+  }
+
+  .annotation {
+    display: inline-block;
+    background: var(--amber-light);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .annotation.green { background: #a8e6be; }
+  .annotation.blue { background: #a8c8e6; }
+  .annotation.red { background: #e6a8a8; }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--amber);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #a0700a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(200,134,10,0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--ink);
+    background: var(--cream);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .step-counter {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: rgba(26,22,18,0.4);
+    letter-spacing: 1px;
+  }
+
+  /* ─── QUIZ ─── */
+  .quiz-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .quiz-opt {
+    padding: 16px 20px;
+    border: 2px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+  }
+
+  .quiz-opt:hover { border-color: var(--amber); background: var(--amber-pale); }
+  .quiz-opt.correct { border-color: var(--green); background: #f0faf4; color: var(--green); }
+  .quiz-opt.wrong { border-color: var(--red); background: #faf0f0; color: var(--red); }
+  .quiz-opt.disabled { pointer-events: none; }
+
+  .quiz-feedback {
+    padding: 16px 20px;
+    border-radius: 6px;
+    font-size: 15px;
+    display: none;
+    margin-top: 12px;
+  }
+
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.ok { background: #f0faf4; color: var(--green); border: 1px solid #a8e6be; }
+  .quiz-feedback.no { background: #faf0f0; color: var(--red); border: 1px solid #e6a8a8; }
+
+  /* ─── FORMULA BOX ─── */
+  .formula {
+    text-align: center;
+    padding: 28px;
+    background: var(--ink);
+    border-radius: 8px;
+    margin: 24px 0;
+    color: var(--paper);
+  }
+
+  .formula .label { color: rgba(245,200,66,0.6); }
+
+  /* ─── HIGHLIGHT TEXT ─── */
+  mark {
+    background: var(--amber-light);
+    color: var(--ink);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    width: 48px;
+    height: 2px;
+    background: var(--amber);
+    margin: 20px 0;
+  }
+
+  /* ─── H2 HEADINGS ─── */
+  h2 {
+    font-family: 'Crimson Pro', serif;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 300;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  h2 em { font-style: italic; color: var(--amber); }
+
+  p { line-height: 1.8; }
+
+  /* ─── SUMMARY GRID ─── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .summary-card {
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: white;
+  }
+
+  .summary-card .icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .summary-card h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 6px;
+  }
+
+  .summary-card p {
+    font-size: 14px;
+    color: rgba(26,22,18,0.65);
+    line-height: 1.6;
+  }
+
+  /* ─── FINAL ─── */
+  #final {
+    background: var(--ink);
+    color: var(--paper);
+    text-align: center;
+  }
+
+  #final h2 { color: var(--paper); }
+  #final p { color: rgba(240,235,224,0.65); }
+
+  .congrats {
+    font-size: 72px;
+    margin-bottom: 16px;
+    animation: spin 2s ease-out;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(-20deg) scale(0.5); opacity: 0; }
+    to { transform: rotate(0) scale(1); opacity: 1; }
+  }
+
+  /* ─── MOBILE FIRST ─── */
+  section { padding: 60px 16px; }
+  .section-inner { max-width: 720px; width: 100%; padding: 0 4px; }
+  .hero-title { font-size: clamp(36px, 10vw, 88px); }
+  .hero-eq { font-size: 14px; padding: 12px 16px; }
+  .chapter-num { font-size: 80px; left: 8px; top: 12px; }
+  nav { padding: 12px 14px; }
+  .nav-dot { width: 7px; height: 7px; }
+  .quiz-options { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .btn-row { flex-wrap: wrap; gap: 8px; }
+  .card { padding: 20px 16px; }
+  .solver-body { padding: 18px 14px; }
+  .frac-input-row { gap: 8px; }
+  .frac-input-wrap input { width: 52px; font-size: 14px; padding: 8px 4px; }
+  .calc-body { padding: 14px; gap: 14px; }
+  .alg-eq { font-size: 13px; word-break: break-word; }
+  #calcCanvas { height: 230px; }
+
+  @media (min-width: 600px) {
+    section { padding: 80px 40px; }
+    .hero-eq { font-size: 22px; padding: 20px 36px; }
+    .chapter-num { font-size: 180px; left: 40px; top: 20px; }
+    nav { padding: 20px 32px; }
+    .nav-dot { width: 8px; height: 8px; }
+    .quiz-options { grid-template-columns: 1fr 1fr; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .card { padding: 32px; }
+    .solver-body { padding: 28px; }
+    .frac-input-wrap input { width: 58px; font-size: 15px; }
+    .calc-body { padding: 24px; gap: 20px; }
+    #calcCanvas { height: 280px; }
+  }
+
+  @media (min-width: 900px) {
+    .calc-body { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Tip box */
+  .tip {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--amber-pale);
+    border-right: 3px solid var(--amber);
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 14px;
+    color: rgba(26,22,18,0.8);
+  }
+
+  .tip-icon { font-size: 18px; flex-shrink: 0; }
+
+  /* ─── CALCULATOR ─── */
+  #s9 { background: #0f0e0c; color: var(--paper); }
+  #s9 h2 { color: var(--paper); }
+  #s9 .label { color: rgba(245,200,66,0.55); }
+  #s9 .divider { background: var(--amber); }
+
+  .calc-shell {
+    background: #1a1814;
+    border: 1px solid rgba(245,200,66,0.15);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .calc-topbar {
+    background: #111009;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(245,200,66,0.08);
+  }
+
+  .calc-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .calc-dot.r { background: #ff5f57; }
+  .calc-dot.y { background: #febc2e; }
+  .calc-dot.g { background: #28c840; }
+
+  .calc-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: rgba(245,200,66,0.4);
+    letter-spacing: 2px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .calc-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 680px) {
+    .calc-body { grid-template-columns: 1fr; }
+  }
+
+  /* Input panel */
+  .calc-panel {
+    background: #111009;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid rgba(245,200,66,0.1);
+  }
+
+  .calc-panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--amber);
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+
+  .frac-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .coeff-label {
+    font-family: 'Crimson Pro', serif;
+    font-size: 22px;
+    color: var(--amber-light);
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .frac-input-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .frac-input-wrap input {
+    width: 58px;
+    background: #1e1c18;
+    border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 4px;
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    text-align: center;
+    padding: 6px 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .frac-input-wrap input:focus { border-color: var(--amber); }
+
+  .frac-line {
+    width: 58px;
+    height: 1.5px;
+    background: rgba(245,200,66,0.35);
+    border-radius: 2px;
+  }
+
+  .frac-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: rgba(245,200,66,0.35);
+    letter-spacing: 1px;
+  }
+
+  .eq-preview {
+    background: #0a0908;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--amber-light);
+    text-align: center;
+    margin: 16px 0;
+    min-height: 38px;
+    letter-spacing: 0.5px;
+    word-break: break-all;
+  }
+
+  .calc-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--amber);
+    color: #0f0e0c;
+    border: none;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .calc-btn:hover { background: var(--amber-light); transform: translateY(-1px); }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* Algebra output */
+  .alg-panel {
+    background: #111009;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid rgba(245,200,66,0.1);
+    grid-column: 1 / -1;
+  }
+
+  .alg-step {
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(245,200,66,0.07);
+    animation: slideIn 0.35s ease both;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .alg-step:last-child { border-bottom: none; }
+
+  .alg-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(245,200,66,0.4);
+    color: var(--amber);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .alg-content { flex: 1; }
+
+  .alg-desc {
+    font-size: 12px;
+    color: rgba(240,235,224,0.45);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+
+  .alg-eq {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--paper);
+    letter-spacing: 0.5px;
+  }
+
+  .alg-eq.highlight { color: var(--amber-light); }
+  .alg-eq.ok { color: #6dd49a; }
+  .alg-eq.err { color: #e68080; }
+
+  /* Graph panel */
+  .graph-panel {
+    background: #111009;
+    border-radius: 8px;
+    border: 1px solid rgba(245,200,66,0.1);
+    overflow: hidden;
+    grid-column: 1 / -1;
+  }
+
+  .graph-panel-title {
+    padding: 12px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--amber);
+    border-bottom: 1px solid rgba(245,200,66,0.07);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .graph-panel-title span:last-child { color: rgba(245,200,66,0.3); font-size: 10px; }
+
+  #calcCanvas {
+    display: block;
+    width: 100%;
+    height: 280px;
+    cursor: crosshair;
+  }
+
+  .graph-legend {
+    padding: 12px 20px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(245,200,66,0.07);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: rgba(240,235,224,0.5);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tooltip-box {
+    position: absolute;
+    background: #0a0908;
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--amber-light);
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .graph-wrap { position: relative; }
+
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<nav id="nav">
+  <div class="nav-dot active" data-section="0" title="פתיח"></div>
+  <div class="nav-dot" data-section="1" title="מה זו משוואה ריבועית"></div>
+  <div class="nav-dot" data-section="2" title="שברים במשוואות"></div>
+  <div class="nav-dot" data-section="3" title="אסטרטגיה: לבטל שברים"></div>
+  <div class="nav-dot" data-section="4" title="פתרון צעד אחר צעד"></div>
+  <div class="nav-dot" data-section="5" title="הנוסחה הריבועית"></div>
+  <div class="nav-dot" data-section="6" title="דוגמה עם נוסחה"></div>
+  <div class="nav-dot" data-section="7" title="תרגיל"></div>
+  <div class="nav-dot" data-section="8" title="סיכום"></div>
+  <div class="nav-dot" data-section="9" title="מחשבון"></div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero">
+  <div class="section-inner">
+    <span class="label" style="color: rgba(245,200,66,0.6)">מדריך אינטראקטיבי · מאפס</span>
+    <h1 class="hero-title">משוואות <em>ריבועיות</em><br>עם שברים</h1>
+    <p class="hero-sub">מדריך שלם — מההתחלה הכי בסיסית<br>עד לפתרון עצמאי מלא</p>
+    <div class="hero-eq">
+      &frac12;x² − &frac23;x + &frac16; = 0
+    </div>
+    <br>
+    <p class="scroll-hint">↓ &nbsp; גלול למטה להתחיל</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 1. מה זו משוואה ריבועית ═══════════════ -->
+<section id="s1">
+  <div class="chapter-num">1</div>
+  <div class="section-inner">
+    <span class="label">פרק ראשון</span>
+    <h2>מה זו<br><em>משוואה ריבועית</em>?</h2>
+    <div class="divider"></div>
+
+    <p>משוואה ריבועית היא משוואה שבה הנעלם <strong>x</strong> מופיע בחזקה שנייה — כלומר יש לנו <strong>x²</strong>.</p>
+
+    <div class="card gold" style="margin: 20px 0;">
+      <h3>הצורה הכללית</h3>
+      <p>כל משוואה ריבועית ניתנת לכתיבה כך:</p>
+      <div class="math-box" style="margin: 16px 0;">ax² + bx + c = 0</div>
+      <p>כש‑<strong>a</strong>, <strong>b</strong>, <strong>c</strong> הם מספרים כלשהם, ו‑<strong>a ≠ 0</strong> (כי אם a=0 היא כבר לא ריבועית)</p>
+    </div>
+
+    <ul class="step-list" id="examples-list">
+      <li class="step-item">
+        <div class="step-num">✓</div>
+        <div class="step-content">
+          <h4>x² − 5x + 6 = 0</h4>
+          <p>כאן: a=1, b=−5, c=6. משוואה ריבועית קלאסית.</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">✓</div>
+        <div class="step-content">
+          <h4>2x² + 3x = 0</h4>
+          <p>גם זו ריבועית — a=2, b=3, c=0.</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">✓</div>
+        <div class="step-content">
+          <h4 style="color: var(--amber)">½x² − ⅔x + ⅙ = 0</h4>
+          <p>גם זו ריבועית! רק שה‑a, b, c הם <mark>שברים</mark> — ובדיוק זה נלמד לפתור.</p>
+        </div>
+      </li>
+    </ul>
+
+    <div class="tip">
+      <span class="tip-icon">💡</span>
+      <span>הפתרונות של משוואה ריבועית נקראים <strong>שורשים</strong>. לרוב יש שניים, לפעמים אחד, ולפעמים אין בכלל (ממשיים).</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. מה זה שבר במשוואה ═══════════════ -->
+<section id="s2">
+  <div class="chapter-num">2</div>
+  <div class="section-inner">
+    <span class="label">פרק שני</span>
+    <h2>למה שברים<br><em>מסבכים</em> את החיים?</h2>
+    <div class="divider"></div>
+
+    <p>כשיש שברים במשוואה, חישובים נהיים מסורבלים. למשל:</p>
+
+    <div class="math-box">
+      <span class="frac"><span class="num">1</span><span class="den">2</span></span>x² −
+      <span class="frac"><span class="num">2</span><span class="den">3</span></span>x +
+      <span class="frac"><span class="num">1</span><span class="den">6</span></span> = 0
+    </div>
+
+    <p>קשה לעבוד עם זה ישירות. <strong>הטריק המרכזי</strong> הוא להיפטר מהשברים לגמרי — עוד לפני שמתחילים לפתור.</p>
+
+    <div class="card" style="margin: 20px 0;">
+      <h3>מה זה מכנה משותף (מ"מ)?</h3>
+      <p>המכנה המשותף הקטן ביותר (ל"מ) הוא המספר הקטן ביותר שמתחלק בכל המכנים של השברים.</p>
+      <br>
+      <p>למשוואה שלנו המכנים הם: <strong>2, 3, 6</strong></p>
+      <p>ה‑ל"מ שלהם הוא: <strong>6</strong></p>
+      <p style="font-size: 13px; color: rgba(26,22,18,0.5); margin-top: 4px;">(כי 6 = 2×3, ו‑6 מתחלק ב‑2, ב‑3, וב‑6)</p>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">🎯</span>
+      <span><strong>האסטרטגיה:</strong> נכפיל את כל המשוואה בל"מ — וכל השברים ייעלמו!</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 3. ביטול שברים ═══════════════ -->
+<section id="s3">
+  <div class="chapter-num">3</div>
+  <div class="section-inner">
+    <span class="label">פרק שלישי · השיטה</span>
+    <h2>ביטול שברים:<br><em>כפל בל"מ</em></h2>
+    <div class="divider"></div>
+
+    <p>הכלל הפשוט: <strong>מה שעושים לצד אחד של המשוואה — עושים גם לצד השני.</strong></p>
+    <p>כשנכפיל שני צדדים בל"מ, כל השברים יהפכו למספרים שלמים.</p>
+
+    <div class="card blue" style="margin: 20px 0;">
+      <h3>הכלל המתמטי</h3>
+      <p>אם <strong>A = B</strong> אז גם <strong>k·A = k·B</strong> לכל k ≠ 0</p>
+      <br>
+      <p style="font-size: 14px; color: rgba(26,22,18,0.6);">כלומר מותר לכפול שני צדדי משוואה באותו מספר מבלי לשנות את הפתרון.</p>
+    </div>
+
+    <div class="card gold">
+      <h3>☑ בדוק הבנה</h3>
+      <p style="margin-bottom: 16px;">מה ל"מ של השברים במשוואה: <strong>⅓x² + ¼x − 1 = 0</strong>?</p>
+
+      <div class="quiz-options" id="q1-opts">
+        <div class="quiz-opt" onclick="checkQ1(this, false)">3</div>
+        <div class="quiz-opt" onclick="checkQ1(this, false)">7</div>
+        <div class="quiz-opt" onclick="checkQ1(this, true)">12</div>
+        <div class="quiz-opt" onclick="checkQ1(this, false)">6</div>
+      </div>
+      <div class="quiz-feedback" id="q1-fb"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 4. פתרון צעד אחר צעד ═══════════════ -->
+<section id="s4">
+  <div class="chapter-num">4</div>
+  <div class="section-inner">
+    <span class="label">פרק רביעי · פתרון אינטראקטיבי</span>
+    <h2>פתרון <em>צעד אחר צעד</em></h2>
+    <div class="divider"></div>
+
+    <p>בואו נפתור יחד:</p>
+    <div class="math-box">
+      ½x² − ⅔x + ⅙ = 0
+    </div>
+
+    <div class="solver">
+      <div class="solver-header">
+        <span>⬡ &nbsp; SOLVER INTERACTIVE</span>
+        <span id="solver-counter">שלב 1 / 5</span>
+      </div>
+      <div class="solver-body">
+
+        <!-- STEP 1 -->
+        <div class="solver-step active" id="ss1">
+          <span class="annotation">שלב 1 — מציאת ל"מ</span>
+          <p class="solver-explain">מזהים את כל המכנים: <strong>2, 3, 6</strong>.<br>המספר הקטן שמתחלק בכולם הוא <strong>6</strong>.</p>
+          <div class="solver-eq highlight">ל"מ = 6</div>
+          <div class="btn-row">
+            <span></span>
+            <button class="btn btn-primary" onclick="nextStep(2)">השלב הבא ←</button>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="solver-step" id="ss2">
+          <span class="annotation">שלב 2 — כפל כל המשוואה ב‑6</span>
+          <p class="solver-explain">נכפיל כל איבר בנפרד:</p>
+          <div class="solver-eq">
+            6 · ½x² &nbsp;−&nbsp; 6 · ⅔x &nbsp;+&nbsp; 6 · ⅙ = 6 · 0
+          </div>
+          <p class="solver-explain" style="text-align: center; margin: 4px 0;">↓ &nbsp; מפשטים</p>
+          <div class="solver-eq highlight">
+            3x² &nbsp;−&nbsp; 4x &nbsp;+&nbsp; 1 = 0
+          </div>
+          <p class="solver-explain">
+            <span style="color: var(--green)">✓ אין יותר שברים!</span> עכשיו יש לנו משוואה ריבועית "רגילה".
+          </p>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="nextStep(1)">← חזור</button>
+            <button class="btn btn-primary" onclick="nextStep(3)">השלב הבא ←</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="solver-step" id="ss3">
+          <span class="annotation">שלב 3 — זיהוי a, b, c</span>
+          <div class="solver-eq">3x² − 4x + 1 = 0</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0;">
+            <div style="text-align: center; padding: 16px; background: white; border-radius: 6px; border: 1px solid var(--line);">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--amber); margin-bottom: 4px;">a</div>
+              <div style="font-size: 26px; font-family: 'Crimson Pro', serif;">3</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: white; border-radius: 6px; border: 1px solid var(--line);">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--blue); margin-bottom: 4px;">b</div>
+              <div style="font-size: 26px; font-family: 'Crimson Pro', serif;">−4</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: white; border-radius: 6px; border: 1px solid var(--line);">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--green); margin-bottom: 4px;">c</div>
+              <div style="font-size: 26px; font-family: 'Crimson Pro', serif;">1</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="nextStep(2)">← חזור</button>
+            <button class="btn btn-primary" onclick="nextStep(4)">השלב הבא ←</button>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="solver-step" id="ss4">
+          <span class="annotation">שלב 4 — הפרדה לגורמים</span>
+          <p class="solver-explain">נסה להפריד: <strong>3x² − 4x + 1 = (3x − 1)(x − 1)</strong></p>
+          <p class="solver-explain" style="font-size: 13px; color: rgba(26,22,18,0.5);">אימות: (3x−1)(x−1) = 3x²−3x−x+1 = 3x²−4x+1 ✓</p>
+          <div class="solver-eq highlight">(3x − 1)(x − 1) = 0</div>
+          <p class="solver-explain">מכיוון שמכפלה = 0, אחד הגורמים חייב להיות אפס:</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0;">
+            <div class="solver-eq" style="font-size: 15px;">3x − 1 = 0<br>x = ⅓</div>
+            <div class="solver-eq" style="font-size: 15px;">x − 1 = 0<br>x = 1</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="nextStep(3)">← חזור</button>
+            <button class="btn btn-primary" onclick="nextStep(5)">הפתרון ←</button>
+          </div>
+        </div>
+
+        <!-- STEP 5 -->
+        <div class="solver-step" id="ss5">
+          <span class="annotation green">✓ פתרון</span>
+          <p class="solver-explain">הפתרונות של המשוואה <strong>½x² − ⅔x + ⅙ = 0</strong> הם:</p>
+          <div class="solver-eq answer">x₁ = ⅓ &nbsp;&nbsp;&nbsp; x₂ = 1</div>
+          <p class="solver-explain">
+            אפשר לאמת: מציבים x=1: ½(1)−⅔(1)+⅙ = 3/6−4/6+1/6 = <strong>0</strong> ✓<br>
+            מציבים x=⅓: ½(⅑)−⅔(⅓)+⅙ = 1/18−2/9+1/6 = 1/18−4/18+3/18 = <strong>0</strong> ✓
+          </p>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="nextStep(1)">↺ התחל מחדש</button>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--green);">🎉 הצלחת!</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 5. הנוסחה הריבועית ═══════════════ -->
+<section id="s5">
+  <div class="chapter-num">5</div>
+  <div class="section-inner">
+    <span class="label">פרק חמישי</span>
+    <h2>הנוסחה<br><em>הריבועית</em></h2>
+    <div class="divider"></div>
+
+    <p>לא תמיד אפשר להפריד לגורמים בקלות. לכן קיימת <strong>הנוסחה הריבועית</strong> — שפותרת <em>כל</em> משוואה ריבועית.</p>
+
+    <div class="formula">
+      <span class="label">QUADRATIC FORMULA</span>
+      <div style="font-family: 'Crimson Pro', serif; font-size: 36px; letter-spacing: 1px; margin: 16px 0; color: var(--amber-light);">
+        x = <span style="font-size: 28px; vertical-align: middle;">
+          <span style="display: inline-block; text-align: center;">
+            <span style="display: block; border-bottom: 2px solid var(--amber-light); padding-bottom: 4px;">−b ± √(b²−4ac)</span>
+            <span style="display: block; padding-top: 4px;">2a</span>
+          </span>
+        </span>
+      </div>
+      <p style="color: rgba(240,235,224,0.55); font-size: 14px; letter-spacing: 1px;">x = (−b ± √(b² − 4ac)) / 2a</p>
+    </div>
+
+    <ul class="step-list" id="formula-parts">
+      <li class="step-item">
+        <div class="step-num" style="background: var(--amber);">a</div>
+        <div class="step-content">
+          <h4>המקדם של x²</h4>
+          <p>הכי חשוב — חייב להיות שונה מאפס.</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num" style="background: var(--blue);">b</div>
+        <div class="step-content">
+          <h4>המקדם של x</h4>
+          <p>שים לב לסימן! אם המשוואה כוללת −5x אז b = −5.</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num" style="background: var(--green);">c</div>
+        <div class="step-content">
+          <h4>האיבר החופשי</h4>
+          <p>המספר ללא x. יכול להיות גם 0.</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num" style="background: var(--red);">Δ</div>
+        <div class="step-content">
+          <h4>הדיסקרימיננטה: b² − 4ac</h4>
+          <p>
+            <strong>Δ > 0</strong> → שני פתרונות שונים<br>
+            <strong>Δ = 0</strong> → פתרון יחיד (כפול)<br>
+            <strong>Δ < 0</strong> → אין פתרון ממשי
+          </p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 6. דוגמה עם נוסחה ═══════════════ -->
+<section id="s6">
+  <div class="chapter-num">6</div>
+  <div class="section-inner">
+    <span class="label">פרק שישי · דוגמה</span>
+    <h2>שימוש בנוסחה<br><em>בפועל</em></h2>
+    <div class="divider"></div>
+
+    <p>נפתור את המשוואה:</p>
+    <div class="math-box">
+      ¼x² + ½x − 2 = 0
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <span class="annotation">שלב 1 — ל"מ = 4, כפל המשוואה ב‑4</span>
+      <div class="solver-eq" style="margin: 12px 0; background: var(--cream);">
+        4 · ¼x² + 4 · ½x − 4 · 2 = 0
+      </div>
+      <div class="solver-eq highlight" style="margin: 4px 0;">x² + 2x − 8 = 0</div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <span class="annotation blue">שלב 2 — זיהוי a, b, c</span>
+      <p style="margin-top: 12px;">a = <strong>1</strong>, &nbsp; b = <strong>2</strong>, &nbsp; c = <strong>−8</strong></p>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <span class="annotation red">שלב 3 — חישוב דיסקרימיננטה</span>
+      <p style="margin-top: 12px;">Δ = b² − 4ac = (2)² − 4·1·(−8) = 4 + 32 = <strong>36</strong></p>
+      <p style="font-size: 14px; color: var(--green);">√36 = 6 &nbsp;→&nbsp; יש שני פתרונות ✓</p>
+    </div>
+
+    <div class="card green" style="margin-top: 16px;">
+      <span class="annotation green">שלב 4 — הנוסחה</span>
+      <div class="solver-eq" style="margin: 12px 0; background: var(--cream); font-size: 16px;">
+        x = (−2 ± 6) / 2
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+        <div class="solver-eq answer" style="font-size: 17px;">x₁ = (−2+6)/2 = 4/2 = <strong>2</strong></div>
+        <div class="solver-eq answer" style="font-size: 17px;">x₂ = (−2−6)/2 = −8/2 = <strong>−4</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 7. תרגיל ═══════════════ -->
+<section id="s7">
+  <div class="chapter-num">7</div>
+  <div class="section-inner">
+    <span class="label">פרק שביעי · תרגול</span>
+    <h2>עכשיו <em>אתה</em> מנסה</h2>
+    <div class="divider"></div>
+
+    <p>פתור את המשוואה הבאה:</p>
+    <div class="math-box">⅙x² − x + &frac32; = 0</div>
+
+    <div class="card gold" style="margin: 20px 0;">
+      <h3>שאלה 1 — מה ה‑ל"מ?</h3>
+      <p style="margin-bottom: 16px;">המכנים הם 6, 1, 2. מה ל"מ שלהם?</p>
+      <div class="quiz-options" id="q2-opts">
+        <div class="quiz-opt" onclick="checkQ('q2', this, false)">2</div>
+        <div class="quiz-opt" onclick="checkQ('q2', this, false)">3</div>
+        <div class="quiz-opt" onclick="checkQ('q2', this, true)">6</div>
+        <div class="quiz-opt" onclick="checkQ('q2', this, false)">12</div>
+      </div>
+      <div class="quiz-feedback" id="q2-fb"></div>
+    </div>
+
+    <div class="card" id="q3-card" style="margin: 16px 0; display: none;">
+      <h3>שאלה 2 — אחרי כפל ב‑6</h3>
+      <p style="margin-bottom: 16px;">אחרי כפל ב‑6 המשוואה הופכת ל:</p>
+      <div class="quiz-options" id="q3-opts">
+        <div class="quiz-opt" onclick="checkQ('q3', this, false)" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">x² − 6x + 9 = 0</div>
+        <div class="quiz-opt" onclick="checkQ('q3', this, true)" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">x² − 6x + 9 = 0<br><span style="font-size: 11px; opacity: 0.7;">(נכון! ½·⅙·6=1, 1·6=6, 3/2·6=9)</span></div>
+        <div class="quiz-opt" onclick="checkQ('q3', this, false)" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">6x² − x + 3 = 0</div>
+        <div class="quiz-opt" onclick="checkQ('q3', this, false)" style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">x² − 6x + 3 = 0</div>
+      </div>
+      <div class="quiz-feedback" id="q3-fb"></div>
+    </div>
+
+    <div class="card green" id="q4-card" style="margin: 16px 0; display: none;">
+      <h3>שאלה 3 — מהם הפתרונות?</h3>
+      <p style="margin-bottom: 8px; font-size: 14px; color: rgba(26,22,18,0.6);">רמז: x² − 6x + 9 = (x−3)²</p>
+      <div class="quiz-options" id="q4-opts">
+        <div class="quiz-opt" onclick="checkQ('q4', this, false)">x=1, x=9</div>
+        <div class="quiz-opt" onclick="checkQ('q4', this, false)">x=−3, x=3</div>
+        <div class="quiz-opt" onclick="checkQ('q4', this, true)">x=3 (פתרון כפול)</div>
+        <div class="quiz-opt" onclick="checkQ('q4', this, false)">x=6, x=3</div>
+      </div>
+      <div class="quiz-feedback" id="q4-fb"></div>
+    </div>
+
+    <div id="bravo" style="display:none; text-align:center; padding: 24px; background: var(--amber-pale); border-radius: 8px; margin-top: 16px;">
+      <div style="font-size: 48px;">🎯</div>
+      <h3 style="font-family: 'Crimson Pro'; font-size: 28px; margin: 12px 0;">מצוין! פתרת בעצמך!</h3>
+      <p style="color: rgba(26,22,18,0.65);">Δ = 36−36 = 0 → פתרון יחיד כפול: <strong>x = 3</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 8. סיכום ═══════════════ -->
+<section id="s8">
+  <div class="chapter-num">8</div>
+  <div class="section-inner">
+    <span class="label">סיכום</span>
+    <h2>כל מה<br>שצריך <em>לזכור</em></h2>
+    <div class="divider"></div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="icon">1️⃣</div>
+        <h4>מצא ל"מ</h4>
+        <p>המכנה המשותף הקטן של כל השברים במשוואה</p>
+      </div>
+      <div class="summary-card">
+        <div class="icon">2️⃣</div>
+        <h4>כפל הכול</h4>
+        <p>כפל כל איבר בל"מ — משני הצדדים. השברים נעלמים</p>
+      </div>
+      <div class="summary-card">
+        <div class="icon">3️⃣</div>
+        <h4>זהה a, b, c</h4>
+        <p>מהמשוואה הריבועית שקיבלת ללא שברים</p>
+      </div>
+      <div class="summary-card">
+        <div class="icon">4️⃣</div>
+        <h4>פתור</h4>
+        <p>הפרדה לגורמים, או הנוסחה: x=(−b±√Δ)/2a</p>
+      </div>
+    </div>
+
+    <div class="formula" style="margin-top: 28px;">
+      <span class="label">הנוסחה שתמיד עובדת</span>
+      <p style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; color: var(--amber-light); margin: 16px 0; letter-spacing: 1px;">
+        x = (−b ± √(b²−4ac)) / 2a
+      </p>
+      <p style="color: rgba(240,235,224,0.45); font-size: 13px;">כשיש שברים — קודם מכפילים בל"מ</p>
+    </div>
+
+    <div class="tip" style="margin-top: 20px;">
+      <span class="tip-icon">✅</span>
+      <span><strong>לאמת תמיד!</strong> הצב את הפתרון חזרה במשוואה המקורית ובדוק שמקבלים 0.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 9. CALCULATOR ═══════════════ -->
+<section id="s9">
+  <div class="section-inner" style="max-width: 800px;">
+    <span class="label">פרק תשיעי · כלי עבודה</span>
+    <h2>מחשבון <em>גרפי ואלגברי</em></h2>
+    <div class="divider"></div>
+    <p style="color: rgba(240,235,224,0.6); margin-bottom: 4px;">הכנס מקדמים כשברים או מספרים שלמים — והמחשבון יפתור ויצייר הכול באופן מיידי.</p>
+
+    <div class="calc-shell">
+      <div class="calc-topbar">
+        <div class="calc-dot r"></div>
+        <div class="calc-dot y"></div>
+        <div class="calc-dot g"></div>
+        <span class="calc-title">QUADRATIC SOLVER · GRAPHICAL + ALGEBRAIC</span>
+      </div>
+
+      <div class="calc-body">
+
+        <!-- ── INPUTS ── -->
+        <div class="calc-panel">
+          <div class="calc-panel-title">⬡ &nbsp; קלט — מקדמים</div>
+
+          <div class="frac-input-row">
+            <span class="coeff-label">a</span>
+            <div class="frac-input-wrap">
+              <span class="frac-label">מונה</span>
+              <input id="a_n" type="number" value="1" oninput="livePreview()">
+              <div class="frac-line"></div>
+              <input id="a_d" type="number" value="2" min="1" oninput="livePreview()">
+              <span class="frac-label">מכנה</span>
+            </div>
+            <span style="color:rgba(245,200,66,0.3); font-family:'IBM Plex Mono',monospace; font-size:18px;">x²</span>
+          </div>
+
+          <div class="frac-input-row">
+            <span class="coeff-label">b</span>
+            <div class="frac-input-wrap">
+              <span class="frac-label">מונה</span>
+              <input id="b_n" type="number" value="-2" oninput="livePreview()">
+              <div class="frac-line"></div>
+              <input id="b_d" type="number" value="3" min="1" oninput="livePreview()">
+              <span class="frac-label">מכנה</span>
+            </div>
+            <span style="color:rgba(245,200,66,0.3); font-family:'IBM Plex Mono',monospace; font-size:18px;">x</span>
+          </div>
+
+          <div class="frac-input-row">
+            <span class="coeff-label">c</span>
+            <div class="frac-input-wrap">
+              <span class="frac-label">מונה</span>
+              <input id="c_n" type="number" value="1" oninput="livePreview()">
+              <div class="frac-line"></div>
+              <input id="c_d" type="number" value="6" min="1" oninput="livePreview()">
+              <span class="frac-label">מכנה</span>
+            </div>
+            <span style="color:rgba(245,200,66,0.3); font-family:'IBM Plex Mono',monospace; font-size:18px;">+ 0</span>
+          </div>
+
+          <div class="eq-preview" id="eq-preview">½x² − ⅔x + ⅙ = 0</div>
+          <button class="calc-btn" onclick="runCalc()">⟶ &nbsp; חשב ופרט</button>
+        </div>
+
+        <!-- ── QUICK EXAMPLES ── -->
+        <div class="calc-panel">
+          <div class="calc-panel-title">◈ &nbsp; דוגמאות מהירות</div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-secondary" onclick="loadEx(1,2,-2,3,1,6)" style="font-family:'IBM Plex Mono',monospace; font-size:12px; width:100%; text-align:right; padding: 10px 14px; background:#1a1814; border-color:rgba(245,200,66,0.2); color:rgba(240,235,224,0.7);">
+              ½x² − ⅔x + ⅙ = 0 &nbsp;<span style="color:var(--amber); font-size:10px;">שני שורשים</span>
+            </button>
+            <button class="btn btn-secondary" onclick="loadEx(1,4,1,2,-2,1)" style="font-family:'IBM Plex Mono',monospace; font-size:12px; width:100%; text-align:right; padding: 10px 14px; background:#1a1814; border-color:rgba(245,200,66,0.2); color:rgba(240,235,224,0.7);">
+              ¼x² + ½x − 2 = 0 &nbsp;<span style="color:var(--amber); font-size:10px;">שני שורשים</span>
+            </button>
+            <button class="btn btn-secondary" onclick="loadEx(1,6,-1,1,3,2)" style="font-family:'IBM Plex Mono',monospace; font-size:12px; width:100%; text-align:right; padding: 10px 14px; background:#1a1814; border-color:rgba(245,200,66,0.2); color:rgba(240,235,224,0.7);">
+              ⅙x² − x + 3/2 = 0 &nbsp;<span style="color:var(--amber); font-size:10px;">שורש כפול</span>
+            </button>
+            <button class="btn btn-secondary" onclick="loadEx(1,3,1,1,1,1)" style="font-family:'IBM Plex Mono',monospace; font-size:12px; width:100%; text-align:right; padding: 10px 14px; background:#1a1814; border-color:rgba(245,200,66,0.2); color:rgba(240,235,224,0.7);">
+              ⅓x² + x + 1 = 0 &nbsp;<span style="color:var(--red); font-size:10px;">אין פתרון ממשי</span>
+            </button>
+            <button class="btn btn-secondary" onclick="loadEx(2,1,-5,1,3,1)" style="font-family:'IBM Plex Mono',monospace; font-size:12px; width:100%; text-align:right; padding: 10px 14px; background:#1a1814; border-color:rgba(245,200,66,0.2); color:rgba(240,235,224,0.7);">
+              2x² − 5x + 3 = 0 &nbsp;<span style="color:var(--amber); font-size:10px;">מספרים שלמים</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── ALGEBRA OUTPUT ── -->
+        <div class="alg-panel" id="alg-output" style="display:none;">
+          <div class="calc-panel-title">◎ &nbsp; פירוט אלגברי — צעד אחר צעד</div>
+          <div id="alg-steps"></div>
+        </div>
+
+        <!-- ── GRAPH ── -->
+        <div class="graph-panel" id="graph-panel" style="display:none;">
+          <div class="graph-panel-title">
+            <span>◉ &nbsp; גרף הפרבולה</span>
+            <span id="graph-eq-label"></span>
+          </div>
+          <div class="graph-wrap">
+            <canvas id="calcCanvas"></canvas>
+            <div class="tooltip-box" id="graph-tooltip"></div>
+          </div>
+          <div class="graph-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#f5c842;"></div>פרבולה y = f(x)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#e06060;"></div>שורשים</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#6dd49a;"></div>קדקוד</div>
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(200,134,10,0.4); border:1px dashed var(--amber);"></div>ציר סימטריה</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FINAL ═══════════════ -->
+<section id="final">
+  <div class="section-inner" style="text-align: center;">
+    <div class="congrats">🏆</div>
+    <span class="label" style="color: rgba(245,200,66,0.5); justify-content: center; display: block;">סיימת את המדריך</span>
+    <h2 style="font-family: 'Crimson Pro'; font-size: 48px; color: var(--paper); font-weight: 300; margin: 12px 0;">כל הכבוד!</h2>
+    <p style="color: rgba(240,235,224,0.55); max-width: 480px; margin: 0 auto 32px;">עכשיו אתה יודע לפתור כל משוואה ריבועית עם שברים — צעד אחר צעד, מבסיס ועד פתרון מלא.</p>
+    <button class="btn btn-primary" onclick="scrollToSection(0)">↑ &nbsp; חזור להתחלה</button>
+  </div>
+</section>
+
+<script>
+  // ─── SECTIONS ───
+  const sections = document.querySelectorAll('section');
+  const dots = document.querySelectorAll('.nav-dot');
+  const progressBar = document.getElementById('progress-bar');
+
+  function scrollToSection(i) {
+    sections[i].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  dots.forEach(d => {
+    d.addEventListener('click', () => scrollToSection(+d.dataset.section));
+  });
+
+  // ─── INTERSECTION OBSERVER ───
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // reveal steps inside
+        entry.target.querySelectorAll('.step-item').forEach((el, i) => {
+          setTimeout(() => el.classList.add('revealed'), i * 180);
+        });
+      }
+    });
+  }, { threshold: 0.15 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ─── ACTIVE DOT + PROGRESS ───
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const total = document.body.scrollHeight - window.innerHeight;
+    progressBar.style.width = (scrolled / total * 100) + '%';
+
+    let active = 0;
+    sections.forEach((s, i) => {
+      if (s.getBoundingClientRect().top < window.innerHeight * 0.5) active = i;
+    });
+
+    dots.forEach((d, i) => d.classList.toggle('active', i === active));
+  });
+
+  // ─── SOLVER ───
+  let currentStep = 1;
+  const totalSteps = 5;
+
+  function nextStep(n) {
+    document.getElementById('ss' + currentStep).classList.remove('active');
+    currentStep = n;
+    document.getElementById('ss' + n).classList.add('active');
+    document.getElementById('solver-counter').textContent = `שלב ${n} / ${totalSteps}`;
+  }
+
+  // ─── QUIZ Q1 ───
+  function checkQ1(el, correct) {
+    if (el.classList.contains('disabled')) return;
+    document.querySelectorAll('#q1-opts .quiz-opt').forEach(o => o.classList.add('disabled'));
+    const fb = document.getElementById('q1-fb');
+    if (correct) {
+      el.classList.add('correct');
+      fb.className = 'quiz-feedback show ok';
+      fb.innerHTML = '✓ נכון! ל"מ של 3, 4, 12 הוא 12. כי 12 = 4×3, ו‑12 מתחלק ב‑3, ב‑4, וב‑12.';
+    } else {
+      el.classList.add('wrong');
+      document.querySelectorAll('#q1-opts .quiz-opt')[2].classList.add('correct');
+      fb.className = 'quiz-feedback show no';
+      fb.innerHTML = '✗ לא בדיוק. הל"מ הוא 12 — המספר הקטן שמתחלק ב‑3, ב‑4, וב‑12 (האיבר −1 לא שבר).';
+    }
+  }
+
+  // ─── QUIZ GENERIC ───
+  let q3visible = false, q4visible = false;
+
+  function checkQ(id, el, correct) {
+    const opts = document.querySelectorAll(`#${id}-opts .quiz-opt`);
+    if ([...opts].some(o => o.classList.contains('disabled'))) return;
+    opts.forEach(o => o.classList.add('disabled'));
+    const fb = document.getElementById(`${id}-fb`);
+
+    if (correct) {
+      el.classList.add('correct');
+      fb.className = 'quiz-feedback show ok';
+      if (id === 'q2') {
+        fb.innerHTML = '✓ נכון! ל"מ של 6, 1, 2 הוא 6.';
+        setTimeout(() => { document.getElementById('q3-card').style.display='block'; }, 500);
+      } else if (id === 'q3') {
+        fb.innerHTML = '✓ מדויק! ⅙·6=1, 1·6=6, 3/2·6=9 → x²−6x+9=0.';
+        setTimeout(() => { document.getElementById('q4-card').style.display='block'; }, 500);
+      } else if (id === 'q4') {
+        fb.innerHTML = '✓ פתרון כפול! Δ = 36−36 = 0 → x = 3 בלבד.';
+        setTimeout(() => { document.getElementById('bravo').style.display='block'; }, 600);
+      }
+    } else {
+      el.classList.add('wrong');
+      opts.forEach(o => { if (o.onclick.toString().includes('true')) o.classList.add('correct'); });
+      fb.className = 'quiz-feedback show no';
+      if (id === 'q2') fb.innerHTML = '✗ לא בדיוק. ל"מ של 6, 1, 2 הוא 6.';
+      else if (id === 'q3') fb.innerHTML = '✗ כפול ב‑6: ⅙×6=1, 1×6=6, 3/2×6=9 → x²−6x+9=0';
+      else if (id === 'q4') fb.innerHTML = '✗ (x−3)²=0 → x=3 בלבד (פתרון כפול כי Δ=0)';
+    }
+  }
+
+  // init hero visible
+  document.getElementById('hero').classList.add('visible');
+
+  // ══════════ CALCULATOR ══════════
+
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; }
+  function lcm(a, b) { return Math.abs(a * b) / gcd(a, b); }
+  function lcmArr(arr) { return arr.reduce((acc, v) => lcm(acc, v), 1); }
+
+  function getVal(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+  function fracSimplify(n, d) {
+    if (d === 0) return [n, 1];
+    const g = gcd(Math.abs(n), Math.abs(d));
+    const sign = d < 0 ? -1 : 1;
+    return [sign * n / g, sign * d / g];
+  }
+
+  function fracStr(n, d) {
+    [n, d] = fracSimplify(n, d);
+    if (d === 1) return `${n}`;
+    return `${n}/${d}`;
+  }
+
+  function fracToDecimal(n, d) { return d === 0 ? Infinity : n / d; }
+
+  function livePreview() {
+    const an = getVal('a_n'), ad = Math.max(1, Math.abs(getVal('a_d')));
+    const bn = getVal('b_n'), bd = Math.max(1, Math.abs(getVal('b_d')));
+    const cn = getVal('c_n'), cd = Math.max(1, Math.abs(getVal('c_d')));
+    const aStr = fracStr(an, ad);
+    const bAbs = Math.abs(bn), bSign = bn < 0 ? '−' : '+';
+    const bStr = fracStr(bAbs, bd);
+    const cAbs = Math.abs(cn), cSign = cn < 0 ? '−' : '+';
+    const cStr = fracStr(cAbs, cd);
+    document.getElementById('eq-preview').textContent =
+      `(${aStr})x² ${bSign} (${bStr})x ${cSign} (${cStr}) = 0`;
+  }
+
+  function loadEx(an, ad, bn, bd, cn, cd) {
+    document.getElementById('a_n').value = an;
+    document.getElementById('a_d').value = ad;
+    document.getElementById('b_n').value = bn;
+    document.getElementById('b_d').value = bd;
+    document.getElementById('c_n').value = cn;
+    document.getElementById('c_d').value = cd;
+    livePreview();
+    runCalc();
+  }
+
+  function addStep(container, num, desc, eq, cls = '') {
+    const div = document.createElement('div');
+    div.className = 'alg-step';
+    div.style.animationDelay = (num * 0.07) + 's';
+    div.innerHTML = `
+      <div class="alg-num">${num}</div>
+      <div class="alg-content">
+        <div class="alg-desc">${desc}</div>
+        <div class="alg-eq ${cls}">${eq}</div>
+      </div>`;
+    container.appendChild(div);
+  }
+
+  function runCalc() {
+    const an = getVal('a_n'), ad = Math.max(1, Math.abs(getVal('a_d')));
+    const bn = getVal('b_n'), bd = Math.max(1, Math.abs(getVal('b_d')));
+    const cn = getVal('c_n'), cd = Math.max(1, Math.abs(getVal('c_d')));
+
+    const a = fracToDecimal(an, ad);
+    const b = fracToDecimal(bn, bd);
+    const c = fracToDecimal(cn, cd);
+
+    const alg = document.getElementById('alg-output');
+    const stepsEl = document.getElementById('alg-steps');
+    stepsEl.innerHTML = '';
+    alg.style.display = 'block';
+    document.getElementById('graph-panel').style.display = 'block';
+
+    let sn = 1;
+
+    // Step 1 — original
+    const origEq = `(${fracStr(an,ad)})x² + (${fracStr(bn,bd)})x + (${fracStr(cn,cd)}) = 0`;
+    addStep(stepsEl, sn++, 'המשוואה המקורית', origEq);
+
+    // Step 2 — LCM
+    if (ad !== 1 || bd !== 1 || cd !== 1) {
+      const L = lcmArr([ad, bd, cd]);
+      addStep(stepsEl, sn++, `ל"מ של המכנים (${ad}, ${bd}, ${cd})`, `ל"מ = ${L}`, 'highlight');
+
+      // Step 3 — multiply
+      const A_n = an * (L / ad), B_n = bn * (L / bd), C_n = cn * (L / cd);
+      const [As] = fracSimplify(A_n, 1);
+      const [Bs] = fracSimplify(B_n, 1);
+      const [Cs] = fracSimplify(C_n, 1);
+      const bSign = Bs < 0 ? '−' : '+';
+      const cSign = Cs < 0 ? '−' : '+';
+      addStep(stepsEl, sn++,
+        `כפל כל המשוואה ב‑${L}`,
+        `${As}x² ${bSign} ${Math.abs(Bs)}x ${cSign} ${Math.abs(Cs)} = 0`);
+    }
+
+    // Step 4 — a,b,c values
+    if (a === 0) {
+      addStep(stepsEl, sn++, 'שגיאה', 'a = 0 — לא משוואה ריבועית!', 'err');
+      drawGraph(a, b, c, [], null);
+      return;
+    }
+
+    addStep(stepsEl, sn++,
+      'זיהוי מקדמים (כמספרים ממשיים)',
+      `a = ${round(a)}, &nbsp; b = ${round(b)}, &nbsp; c = ${round(c)}`);
+
+    // Step 5 — discriminant
+    const disc = b * b - 4 * a * c;
+    const discStr = `Δ = b²−4ac = (${round(b)})²−4·(${round(a)})·(${round(c)}) = ${round(b*b)}−${round(4*a*c)} = ${round(disc)}`;
+    const discCls = disc > 0 ? 'ok' : disc === 0 ? 'highlight' : 'err';
+    addStep(stepsEl, sn++, 'דיסקרימיננטה Δ = b²−4ac', discStr, discCls);
+
+    let roots = [];
+
+    if (disc < 0) {
+      addStep(stepsEl, sn++, 'Δ < 0 → אין פתרון ממשי',
+        'אין שורשים ממשיים — הפרבולה לא חוצת את ציר x', 'err');
+    } else if (disc === 0) {
+      const x0 = -b / (2 * a);
+      addStep(stepsEl, sn++, 'Δ = 0 → שורש כפול',
+        `x = −b / 2a = ${round(-b)} / ${round(2*a)} = ${round(x0)}`, 'ok');
+      roots = [x0];
+    } else {
+      const sqrtD = Math.sqrt(disc);
+      addStep(stepsEl, sn++, '√Δ', `√${round(disc)} ≈ ${round(sqrtD)}`);
+      const x1 = (-b + sqrtD) / (2 * a);
+      const x2 = (-b - sqrtD) / (2 * a);
+      addStep(stepsEl, sn++, 'x₁ = (−b + √Δ) / 2a',
+        `x₁ = (${round(-b)} + ${round(sqrtD)}) / ${round(2*a)} = ${round(x1)}`, 'ok');
+      addStep(stepsEl, sn++, 'x₂ = (−b − √Δ) / 2a',
+        `x₂ = (${round(-b)} − ${round(sqrtD)}) / ${round(2*a)} = ${round(x2)}`, 'ok');
+      roots = [x1, x2].sort((a,b)=>a-b);
+    }
+
+    // Vertex
+    const vx = -b / (2 * a);
+    const vy = a * vx * vx + b * vx + c;
+    addStep(stepsEl, sn++, 'קדקוד הפרבולה',
+      `V = (${round(vx)}, ${round(vy)})`, 'highlight');
+
+    document.getElementById('graph-eq-label').textContent =
+      `y = (${fracStr(an,ad)})x² + (${fracStr(bn,bd)})x + (${fracStr(cn,cd)})`;
+
+    drawGraph(a, b, c, roots, { x: vx, y: vy });
+  }
+
+  function round(v, d = 3) {
+    return parseFloat(v.toFixed(d)).toString();
+  }
+
+  // ── CANVAS GRAPH ──
+  function drawGraph(a, b, c, roots, vertex) {
+    const canvas = document.getElementById('calcCanvas');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth, H = canvas.offsetHeight || 280;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // determine range
+    const vx = vertex ? vertex.x : -b / (2 * a);
+    const vy = vertex ? vertex.y : a * vx * vx + b * vx + c;
+
+    let xMin, xMax;
+    if (roots.length === 2) {
+      const spread = Math.max(Math.abs(roots[1] - roots[0]) * 1.5, 4);
+      xMin = Math.min(roots[0], vx) - spread * 0.4;
+      xMax = Math.max(roots[1], vx) + spread * 0.4;
+    } else if (roots.length === 1) {
+      xMin = roots[0] - 4; xMax = roots[0] + 4;
+    } else {
+      xMin = vx - 4; xMax = vx + 4;
+    }
+
+    // compute yMin / yMax from curve
+    let yVals = [];
+    const steps = 200;
+    for (let i = 0; i <= steps; i++) {
+      const x = xMin + (xMax - xMin) * i / steps;
+      yVals.push(a * x * x + b * x + c);
+    }
+    let yMin = Math.min(...yVals, 0) - 1;
+    let yMax = Math.max(...yVals, 0) + 1;
+    const yPad = (yMax - yMin) * 0.15;
+    yMin -= yPad; yMax += yPad;
+
+    const toX = x => (x - xMin) / (xMax - xMin) * W;
+    const toY = y => H - (y - yMin) / (yMax - yMin) * H;
+
+    // background
+    ctx.fillStyle = '#111009';
+    ctx.fillRect(0, 0, W, H);
+
+    // grid
+    ctx.strokeStyle = 'rgba(245,200,66,0.06)';
+    ctx.lineWidth = 1;
+    const nGrid = 8;
+    for (let i = 0; i <= nGrid; i++) {
+      const gx = W * i / nGrid;
+      const gy = H * i / nGrid;
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+    }
+
+    // axes
+    const ax0 = toX(0), ay0 = toY(0);
+    ctx.strokeStyle = 'rgba(240,235,224,0.25)';
+    ctx.lineWidth = 1.5;
+    if (ax0 >= 0 && ax0 <= W) {
+      ctx.beginPath(); ctx.moveTo(ax0, 0); ctx.lineTo(ax0, H); ctx.stroke();
+    }
+    if (ay0 >= 0 && ay0 <= H) {
+      ctx.beginPath(); ctx.moveTo(0, ay0); ctx.lineTo(W, ay0); ctx.stroke();
+    }
+
+    // axis tick labels
+    ctx.fillStyle = 'rgba(240,235,224,0.3)';
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    const xStep = niceStep(xMax - xMin, 6);
+    const xStart = Math.ceil(xMin / xStep) * xStep;
+    for (let x = xStart; x <= xMax; x += xStep) {
+      const px = toX(x);
+      if (Math.abs(x) < 1e-9) continue;
+      ctx.fillText(round(x, 1), px, Math.min(H - 4, ay0 + 14));
+      ctx.strokeStyle = 'rgba(240,235,224,0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px, ay0 - 3); ctx.lineTo(px, ay0 + 3); ctx.stroke();
+    }
+    const yStep = niceStep(yMax - yMin, 6);
+    const yStart = Math.ceil(yMin / yStep) * yStep;
+    ctx.textAlign = 'right';
+    for (let y = yStart; y <= yMax; y += yStep) {
+      const py = toY(y);
+      if (Math.abs(y) < 1e-9) continue;
+      ctx.fillStyle = 'rgba(240,235,224,0.3)';
+      ctx.fillText(round(y, 1), Math.max(28, ax0 - 6), py + 3);
+    }
+
+    // axis of symmetry (dashed)
+    if (vertex) {
+      const svx = toX(vertex.x);
+      ctx.strokeStyle = 'rgba(200,134,10,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(svx, 0); ctx.lineTo(svx, H); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // parabola curve
+    ctx.strokeStyle = '#f5c842';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(245,200,66,0.3)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= steps; i++) {
+      const x = xMin + (xMax - xMin) * i / steps;
+      const y = a * x * x + b * x + c;
+      const px = toX(x), py = toY(y);
+      if (py < -20 || py > H + 20) { started = false; continue; }
+      if (!started) { ctx.moveTo(px, py); started = true; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // roots
+    roots.forEach(rx => {
+      const px = toX(rx), py = toY(0);
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#e06060';
+      ctx.fill();
+      ctx.strokeStyle = '#0a0908';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#e06060';
+      ctx.font = 'bold 11px IBM Plex Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`x=${round(rx,2)}`, px, py - 12);
+    });
+
+    // vertex
+    if (vertex) {
+      const px = toX(vertex.x), py = toY(vertex.y);
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#6dd49a';
+      ctx.fill();
+      ctx.strokeStyle = '#0a0908';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#6dd49a';
+      ctx.font = 'bold 11px IBM Plex Mono, monospace';
+      ctx.textAlign = px > W * 0.7 ? 'right' : 'left';
+      ctx.fillText(`V(${round(vertex.x,2)}, ${round(vertex.y,2)})`, px + (px > W*0.7 ? -10 : 10), py - 10);
+    }
+
+    // crosshair tooltip on mouse move
+    canvas.onmousemove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const x = xMin + mx / W * (xMax - xMin);
+      const y = a * x * x + b * x + c;
+      const tip = document.getElementById('graph-tooltip');
+      tip.style.display = 'block';
+      tip.style.left = (mx + 12) + 'px';
+      tip.style.top = (my - 8) + 'px';
+      tip.textContent = `x=${round(x,2)}, y=${round(y,2)}`;
+
+      // crosshair line
+      drawGraph(a, b, c, roots, vertex);
+      ctx.strokeStyle = 'rgba(240,235,224,0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, toY(y)); ctx.lineTo(W, toY(y)); ctx.stroke();
+      ctx.setLineDash([]);
+      // dot on curve
+      ctx.beginPath();
+      ctx.arc(mx, toY(y), 4, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(245,200,66,0.8)';
+      ctx.fill();
+    };
+    canvas.onmouseleave = () => {
+      document.getElementById('graph-tooltip').style.display = 'none';
+      drawGraph(a, b, c, roots, vertex);
+    };
+  }
+
+  function niceStep(range, targetCount) {
+    const rough = range / targetCount;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const norm = rough / mag;
+    let nice;
+    if (norm < 1.5) nice = 1;
+    else if (norm < 3) nice = 2;
+    else if (norm < 7) nice = 5;
+    else nice = 10;
+    return nice * mag;
+  }
+
+  // init preview
+  livePreview();
+</script>
+</body>
+</html>
